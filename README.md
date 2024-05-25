@@ -41,3 +41,6 @@ To change these variables, locate the following section in predictor.py:
 wind_speeds = [7, 7, 7, 7, 7, 8, 9, 9, 10, 11, 12, 12, 12, 12, 13, 13, 13, 12, 12, 11, 10, 9, 9, 9]
 daylight_duration = timedelta(hours=15, minutes=49, seconds=53).total_seconds()
 sunshine_duration_percent = 0.55	
+
+Wind speeds can be obtained from https://www.timeanddate.com/weather/uk/norwich/hourly
+Future improvements, maybe get daylight hours, weather from online source
