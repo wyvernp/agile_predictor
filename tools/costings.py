@@ -60,15 +60,28 @@ usage_data['excess_usage'] = usage_data['kwh'] - baseline_usage
 usage_data.loc[usage_data['excess_usage'] < 0, 'excess_usage'] = 0
 
 # Shift excess usage to the cheapest time of the day
+shift_percentage = 0.5 # 50% of excess usage
+
 daily_usage['shifted_usage_cost'] = daily_usage['agile_tariff_cost']
 for date in daily_usage.index:
     daily_usage_period = usage_data[date:date + pd.Timedelta(days=1)]
     daily_prices_period = agile_prices[date:date + pd.Timedelta(days=1)]
     cheapest_time = daily_prices_period['price'].idxmin()
+    
     if cheapest_time in daily_usage_period.index:
         excess_usage = daily_usage_period['excess_usage'].sum()
-        shifted_cost = excess_usage * daily_prices_period.loc[cheapest_time, 'price']
-        daily_usage.at[date, 'shifted_usage_cost'] -= excess_usage * daily_usage_period.loc[daily_usage_period['excess_usage'] > 0, 'kwh'].mean()
+        
+        # Calculate the amount to be shifted based on the specified percentage
+        amount_to_shift = excess_usage * shift_percentage
+        
+        # Calculate the average cost of the excess usage before shifting
+        avg_excess_cost = daily_usage_period.loc[daily_usage_period['excess_usage'] > 0, 'kwh'].mean()
+        
+        # Calculate the shifted cost at the cheapest time
+        shifted_cost = amount_to_shift * daily_prices_period.loc[cheapest_time, 'price']
+        
+        # Update the shifted usage cost in the daily usage DataFrame
+        daily_usage.at[date, 'shifted_usage_cost'] -= amount_to_shift * avg_excess_cost
         daily_usage.at[date, 'shifted_usage_cost'] += shifted_cost
 
 # Save the results to a CSV
@@ -78,11 +91,22 @@ daily_usage.to_csv(output_filename)
 # Confirm the CSV has been saved
 print(f"The daily cost comparison has been saved to {output_filename}.")
 
+# Calculate total costs
+total_current_tariff_cost = daily_usage['current_tariff_cost'].sum()
+total_agile_tariff_cost = daily_usage['agile_tariff_cost'].sum()
+total_shifted_usage_cost = daily_usage['shifted_usage_cost'].sum() if energy_shift else None
+
+# Output the total costs
+print(f"Total Current Tariff Cost: £{total_current_tariff_cost:.2f}")
+print(f"Total Agile Tariff Cost: £{total_agile_tariff_cost:.2f}")
+if energy_shift:
+    print(f"Total Shifted Usage Cost: £{total_shifted_usage_cost:.2f}")
+
 # Plotting the daily costs
 plt.figure(figsize=(12, 6))
 plt.plot(daily_usage.index, daily_usage['current_tariff_cost'], label='Current Tariff Cost', color='blue')
 plt.plot(daily_usage.index, daily_usage['agile_tariff_cost'], label='Agile Tariff Cost', color='green')
-if energy_shift == True
+if energy_shift:
     plt.plot(daily_usage.index, daily_usage['shifted_usage_cost'], label='Shifted Usage Cost', color='red')
 plt.xlabel('Date')
 plt.ylabel('Cost (£)')
